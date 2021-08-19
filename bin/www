@@ -4,12 +4,16 @@
  * Module dependencies.
  */
 const http = require("http");
+const cluster = require("cluster");
+const os = require("os");
 const config =
   require("../server/config")[process.env.NODE_ENV || "development"];
 const app = require("../server/app")(config);
 const db = require("../server/lib/db");
 
 const log = config.log();
+
+const numCPUs = os.cpus().length;
 
 // Helper functions
 
@@ -41,17 +45,31 @@ app.set("port", port);
  */
 const server = http.createServer(app);
 
-// Test connection to MongoDB Atlas using DB variables defined in .env
-db.connect(config.database.dsn)
-  .then(() => {
-    log.info("Connected to MongoDB");
-    // server.listen(port);
-  })
-  .catch((error) => {
-    log.fatal(error);
-  });
+// The process that starts first
+if (cluster.isMaster) {
+  log.info(`Master ${process.pid} is running`);
 
-server.listen(port);
+  for (let i = 0; i < numCPUs; i += 1) {
+    cluster.fork(); // creates a worker for each CPU
+  }
+
+  // Log error if a worker stops running
+  cluster.on("exit", (worker) => {
+    log.fatal(`Worker ${worker.process.pid} just died`);
+    cluster.fork();
+  });
+} else {
+  // Test connection to MongoDB Atlas using DB variables defined in .env
+  db.connect(config.database.dsn)
+    .then(() => {
+      log.info("Connected to MongoDB");
+      server.listen(port);
+    })
+    .catch((error) => {
+      log.fatal(error);
+    });
+}
+
 server.on("listening", () => {
   const addr = server.address();
   const bind = typeof addr === "string" ? `pipe ${addr}` : `port ${addr.port}`;
