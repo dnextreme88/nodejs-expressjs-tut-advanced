@@ -10,7 +10,9 @@ function redirectIfLoggedIn(req, res, next) {
   return next();
 }
 
-module.exports = () => {
+module.exports = (params) => {
+  const { avatars } = params;
+
   router.post(
     "/login",
     passport.authenticate("local", {
@@ -32,6 +34,7 @@ module.exports = () => {
   router.post(
     "/registration",
     middlewares.upload.single("avatar"),
+    middlewares.handleAvatar(avatars),
     async (req, res, next) => {
       try {
         const user = new UserModel({
@@ -39,12 +42,20 @@ module.exports = () => {
           email: req.body.email,
           password: req.body.password,
         });
+
+        // If there is a file and there's a filename
+        if (req.file && req.file.storedFilename) {
+          user.avatar = req.file.storedFilename;
+        }
         const savedUser = await user.save();
 
         if (savedUser) return res.redirect("/users/registration?success=true");
 
         return next(new Error("Failed to save user for unknown reasons"));
       } catch (error) {
+        if (req.file && req.file.storedFilename) {
+          await avatars.delete(req.file.storedFilename);
+        }
         return next(error);
       }
     }
