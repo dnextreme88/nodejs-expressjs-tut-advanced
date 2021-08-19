@@ -2,7 +2,7 @@ const express = require("express");
 const cookieParser = require("cookie-parser");
 const session = require("express-session");
 const mongoose = require("mongoose");
-const MongoStore = require("connect-mongo")(session);
+const MongoStore = require("connect-mongo");
 const path = require("path");
 const createError = require("http-errors");
 const bodyParser = require("body-parser");
@@ -31,8 +31,8 @@ module.exports = (config) => {
       secret: "very secret 12345", // sign the sessions to prevent tamperings
       resave: true,
       saveUninitialized: false,
-      store: new MongoStore({
-        mongooseConnection: mongooseConnection.connection,
+      store: MongoStore.create({
+        mongoUrl: process.env.DEVELOPMENT_DB_DSN,
       }),
     })
   );
