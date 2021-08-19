@@ -15,6 +15,10 @@ module.exports = () => {
   router.get("/login", (req, res) =>
     res.render("users/login", { error: req.query.error })
   );
+  router.get("/logout", (req, res) => {
+    req.logout();
+    return res.redirect("/");
+  });
   router.get("/registration", (req, res) =>
     res.render("users/registration", { success: req.query.success })
   );
