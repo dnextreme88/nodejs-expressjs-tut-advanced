@@ -1,7 +1,7 @@
 const express = require("express");
 const passport = require("passport");
 const UserModel = require("../../models/UserModel");
-
+const middlewares = require("../middlewares");
 const router = express.Router();
 
 function redirectIfLoggedIn(req, res, next) {
@@ -29,22 +29,26 @@ module.exports = () => {
     res.render("users/registration", { success: req.query.success })
   );
 
-  router.post("/registration", async (req, res, next) => {
-    try {
-      const user = new UserModel({
-        username: req.body.username,
-        email: req.body.email,
-        password: req.body.password,
-      });
-      const savedUser = await user.save();
+  router.post(
+    "/registration",
+    middlewares.upload.single("avatar"),
+    async (req, res, next) => {
+      try {
+        const user = new UserModel({
+          username: req.body.username,
+          email: req.body.email,
+          password: req.body.password,
+        });
+        const savedUser = await user.save();
 
-      if (savedUser) return res.redirect("/users/registration?success=true");
+        if (savedUser) return res.redirect("/users/registration?success=true");
 
-      return next(new Error("Failed to save user for unknown reasons"));
-    } catch (error) {
-      return next(error);
+        return next(new Error("Failed to save user for unknown reasons"));
+      } catch (error) {
+        return next(error);
+      }
     }
-  });
+  );
 
   router.get(
     "/account",
